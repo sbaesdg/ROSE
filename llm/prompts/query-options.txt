@@ -1,0 +1,19 @@
+Read the following code, locate the parts that implement **command-line argument parsing** (e.g., `getopt/getopt_long/argp/cxxopts/boost::program_options/clap/flag`, or any custom parser / table-driven option definitions), and then **enumerate the complete set of command-line options actually supported by the program**, including but not limited to:
+
+* **Short options** (e.g., `-a`)
+* **Long options** (e.g., `--all`)
+* If a short/long pair maps to the same semantics, include **both forms** (both must appear)
+* Only output options that are **truly supported by the implemented parsing logic**; ignore documentation/comments/options not wired into the parser
+
+Notes:
+* The output must be **JSON**. Output JSON only—no explanations.
+
+Output examples:
+```
+["-a", "--all", "-b", "--batch", "-c"]
+```
+
+Code:
+```
+@@@
+```

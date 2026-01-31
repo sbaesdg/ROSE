@@ -1,0 +1,27 @@
+Given a code repository’s **file structure** (including directories and file paths, and optionally brief hints such as filenames or short summaries), identify the source files that are most likely to contain:
+
+1. **The program entry point**: e.g., a `main` function.
+2. **Command-line option parsing logic**: e.g., `getopt/getopt_long`, `argp_parse`, `CLI11`, `cxxopts`, `boost::program_options`, `argparse/click/typer`, `flag`, `cobra`, `clap`, or custom `parse_args/parse_options` code. The parsing logic may be inside `main` or inside a dedicated parsing function/module invoked by `main`.
+
+Use file paths, filenames, directory semantics, and common project conventions to infer the best candidates. Return the **top 5 most likely file paths** (if fewer than 5 exist, return only what is available), ordered from most to least likely.
+
+Return the result in JSON format, for example:
+{
+    "1": "path/to/file1",
+    "2": "path/to/file2",
+    "3": "path/to/file3",
+    "4": "path/to/file4",
+    "5": "path/to/file5"
+}
+
+Output **JSON only**, no explanations.
+
+Repository file structure (directory tree or file path list):
+```text
+{{REPO_FILE_STRUCTURE}}
+```
+
+(Optional) Additional hints (e.g., language/build system/binary name/entry name, etc.):
+```text
+{{HINTS_OPTIONAL}}
+```

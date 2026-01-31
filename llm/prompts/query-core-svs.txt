@@ -1,0 +1,35 @@
+Please perform a behavior-oriented static analysis of the following code and identify and extract the program’s **core state variables**.
+
+[Definition of Core State Variables]
+Only include variables whose values **directly determine the program’s major execution paths, functional modes, or key behavior switches**, typically such as:
+- Boolean/bit flags such as enable/disable/debug/verbose/feature gates
+- Mode selectors like mode/type/level/policy/strategy/state (enum/int/string/bitfield)
+- Global/static variables, and struct/class fields (especially those widely read and used to drive primary control flow)
+- Any other state fields used to select major logic branches (e.g., switch-case dispatch, critical if conditions, function-pointer/callback selection)
+
+[Filtering Rules (Strictly Ignore)]
+- Temporary variables for intermediate computation, loop counters, short-lived locals
+- Pure input buffers, parsing cursors, tokens, string assembly “carrier” variables
+- Common error-handling variables (errno, ret, status used only for return-code propagation and not for selecting functional modes)
+- Variables used only in a small local scope that do not affect major behavior/mode selection
+
+[Decision Criteria (Any ONE is sufficient to be a candidate)]
+- Read in key control-flow conditions: if/else, switch, while/for conditions, guard checks for goto/early return
+- Determines whether a feature/module is enabled/disabled or changes the main flow (e.g., enters different subsystems, protocols/formats, runtime phases)
+- A global/field read by multiple functions, or propagated as config/context and used in multiple places to decide behavior
+- Different values correspond to describable “modes/strategies/runtime states”
+
+[Output Requirements]
+- Output JSON only. Do not include any extra explanations.
+
+[JSON Output Format]
+[
+    "state_variable_1",
+    "state_variable_2",
+    "state_variable_3"
+]
+
+Code:
+```
+###
+```

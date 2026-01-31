@@ -1,0 +1,32 @@
+You will be given C/C++ source code with line numbers, plus a list of “core state variables” and optional extra information. Your task is to locate the single best **symbolization insertion point (symbolization location)**—a code location where we should assign symbolic values to the core state variables **before** state-variable-driven symbolic execution enters the program’s core logic.
+
+Location rules (all must hold):
+1) At this location, all core state variables have been **fully initialized** (including: defaults, config-file loading, environment-variable loading, command-line option parsing, input/header parsing, and any other assignments/fills that establish their concrete values).
+2) From this location onward, the program is entering or about to enter the **core logic** (e.g., main loop, request/message-processing loop, core algorithm entry, dispatch/handler routing, state-machine execution, primary read/write processing), and subsequent control-flow decisions are primarily driven by these state variables.
+3) After this location, there should be no code that **overwrites/resets/re-initializes** these variables (otherwise the symbolic values would be overwritten and fail to propagate into the core logic).
+4) Among all candidate points that satisfy the above, choose the **earliest** precise location (i.e., initialization is complete, but as close as possible to the core-logic entry).
+
+Output requirements:
+- Output **only** a JSON object. No explanations, no extra text.
+
+Output format example:
+{
+  "function": "main",
+  "symbolization_line": 131,
+  "line": "131: while (running) {"
+}
+
+Core state variable list (to be symbolized):
+```
+@@CORE_STATE_VARS@@
+```
+
+Code (with line numbers):
+```
+@@CODE_WITH_LINE_NUMBERS@@
+```
+
+Other information (optional: initialization/overwrite hints, call graph, entry-function hints, build options, file names, etc.):
+```
+@@EXTRA_INFO@@
+```

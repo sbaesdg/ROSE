@@ -1,0 +1,118 @@
+You will be given: a set of command-line options to analyze, a source code snippet, supplementary information (which may include other definitions of functions/macros), and a set of **core state variables** to focus on. Your task is to **infer how each option affects the core state variables (what it modifies, which code performs the update, and under what conditions the update takes effect), and extract constraints (including local conditions and constraints implied by global sanity checks)**. Output JSON exactly as required, and do not output any explanation.
+
+## Input
+
+Command-line options to parse (comma-separated; options usually start with `-`; note the option itself may be `,`):
+```
++++
+```
+
+Core state variable list (only care about updates and constraints involving these variables; comma-separated; may contain `->` / `.` field access):
+```
+$$$
+```
+
+Code:
+```
+@@@
+```
+
+Supplementary information (may include function bodies, macro definitions, multiple versions of functions with the same name, etc.):
+```
+###
+```
+
+## Placeholder conventions (use these in output constraints/operations)
+
+* If the option’s own character is involved (e.g., `'a'` in `-a`), use `${OPT_SELF_CHAR}`
+* If the option’s integer value used in `switch/case` is involved (e.g., a long option mapped to a `case` integer), use `${OPT_SELF_INT}`
+* If the string argument immediately following the option is involved, use `${OPTVAL}`
+* If the integer converted from `${OPTVAL}` is involved, use `${OPTVAL_INT}`
+
+## What you must produce
+
+### A. Option effects (effects)
+
+1. Read the code and locate the command-line option parsing path after the program enters `main` (e.g., a `getopt/getopt_long` loop, `switch` cases, custom parsing loops, etc.).
+2. For each option in the “options to parse” list, extract the **sequence of update operations** applied to **core state variables** during option parsing.
+
+   * Each update operation must be written as: `var op value`, where `op` can be `=, +=, -=, &=, |=, ^=, <<=, >>=, *=, /=`, etc.; `value` may be computed from non-local variables/constants/macros (the same variable may appear on both sides).
+   * A single core state variable may be updated multiple times under the same option; preserve execution order.
+3. “Which code performs the update”: you do not need to output line numbers, but each update must correspond to a **clear statement semantics** (i.e., your `var op value` should match an update statement in the source or an equivalently expanded form). If the source updates indirectly via function calls, inline-expand them (see C).
+
+### B. Constraints
+
+For **each** operation in the sequence, provide a list of constraints that must hold for that operation to execute:
+
+* Constraint sources include (but are not limited to):
+
+  1. Control-flow conditions: `if/else/switch` branch conditions, loop conditions, short-circuit logic, etc.;
+  2. Option argument constraints: value ranges, enumerated values, required/forbidden forms, etc.;
+  3. **Prior core state requirements**: e.g., a state variable must already be set to a certain value or be in a range;
+  4. **Global sanity-check implied constraints**: error/exit/usage checks that occur after option parsing (or before entering main logic). Convert them into boolean constraints required for successful continuation (see D).
+* Write constraints as code-style boolean expression strings (e.g., `var1 > 2`, `!(state->x == 0)`, `a && (b || c)`).
+* Constraints must contain **only core state variables** and `${OPT...}` placeholders. Do not introduce temporary/local variables. If an intermediate value is unavoidable, rewrite it into an equivalent expression using core state variables and placeholders.
+
+### C. Inline expansion and denoising
+
+1. If updates are performed via function calls, use the supplementary information to choose the most appropriate definition for the call site, and **inline-expand** into basic update operations so the final operation sequence contains **no function calls**.
+2. Ignore code/variables unrelated to core state variables.
+3. Avoid including calls like `printf/log` that have no return value and do not affect core state variables; also avoid `malloc/free`-style operations that only manage temporary memory.
+4. For some library calls (e.g., `strdup`, `snprintf`), you may expand them by semantics into string assignment/formatting expressions so these calls do not appear in the result.
+5. Simplify constraints:
+
+   * Ignore redundant constraints like `${OPTVAL} != ""`;
+   * Using `${OPTVAL_INT}` implies `${OPTVAL}` is a valid integer string; do not add extra “validity” constraints, and similarly for other conversions.
+   * If some constraints are guaranteed to hold after other constraints and code execution, you may remove them.
+
+### D. Macros and global sanity checks
+
+1. If operations/constraints reference macros (e.g., `MACRO_X`, `~MACRO_Y`, function-like macros, etc.), also extract the visible definitions of these macros (from the code or supplementary info), and output them in a `macros` mapping for post-processing “macro resolution”.
+
+   * If a macro depends on other macros, recursively collect those dependencies into `macros` as well.
+2. Scan the code between “end of option parsing” and “entering main functionality” (and other obvious global validation points) to find sanity checks that cause failure/exit (e.g., `if (...) error();`, `if (...) return -1;`, `usage(); exit(1);`, etc.).
+
+   * Convert them into constraints required for the program to continue successfully (usually the negation or an equivalent rewrite).
+   * Output them in `global_sanity_constraints`.
+   * If a sanity check only applies when an option is enabled / a core state variable has a particular value, encode it conditionally in the constraint set (e.g., an implication-like expression, or attach it to the relevant option’s operation constraints) to produce a more complete constraint set.
+
+### E. Allowed special constraint: format constraint
+
+A special constraint string is allowed:
+
+* `"var formatted as ${format_str}"`
+  where `format_str` may be a pattern string or one of the keywords: `["file", "dir", "url"]`.
+
+## Output format (JSON only)
+
+Output a single JSON object with proper string escaping. The structure must be:
+
+* `options`: map each option to a “pair list” (operation sequence)
+* Each pair is: `[ "<operation>", [ "<constraint1>", "<constraint2>", ... ] ]`
+* `macros`: map macro name to macro definition string (include only macros referenced by `options`/`global` results and their dependencies)
+* `global_sanity_constraints`: list of constraints derived from global sanity checks
+
+If you believe an option does not set any core state variable, output an empty array `[]` for that option.
+
+The final output should look like this (structure example; actual content must come from your analysis):
+```json
+{
+  "options": {
+    "-x": [
+      ["state->a |= MACRO_1", ["${OPTVAL_INT} >= 0", "state->mode == 2"]],
+      ["state->b = ${OPTVAL}", ["state->a & MACRO_2"]]
+    ],
+    "--long": []
+  },
+  "macros": {
+    "MACRO_1": "(1U << 3)",
+    "MACRO_2": "0x10"
+  },
+  "global_sanity_constraints": [
+    "!(state->a == 0)",
+    "state->b != NULL"
+  ]
+}
+```
+
+Output the result directly. Do not explain.
